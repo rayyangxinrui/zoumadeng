@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>走马灯</title>
+<style>
+  :root{--cyan:#e0c184;--cyan-d:#a8742c;--red:#c8372b;--red-d:#5a100c;--gold:#e8c27a;--ink:#140c06;--paper:#efe3c8}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#0a0604;color:#f3e9d2;overflow:hidden;
+    font-family:"KaiTi","STKaiti","Kaiti SC","Songti SC","SimSun",serif;user-select:none}
+  #stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  #frame{position:relative;width:min(100vw,177.78vh);aspect-ratio:16/9;background:#000;overflow:hidden;container-type:size}
+  video.layer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0}
+  video.layer.on{opacity:1}
+  #frame.shake{animation:shake .45s}
+  #frame.shake-s{animation:shake .25s}
+  @keyframes shake{0%,100%{transform:translate(0,0)}15%{transform:translate(-1.2cqw,.8cqw)}30%{transform:translate(1.1cqw,-.9cqw)}45%{transform:translate(-.8cqw,-.5cqw)}60%{transform:translate(.7cqw,.6cqw)}80%{transform:translate(-.3cqw,.2cqw)}}
+  #vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,transparent 45%,#000a 100%)}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+  #flash.go{animation:flash .5s ease-out}
+  @keyframes flash{0%{opacity:.85}100%{opacity:0}}
+  .ui{position:absolute;transition:opacity .5s, transform .5s}
+  .hide{opacity:0 !important;pointer-events:none !important}
+
+  /* 顶部提示 */
+  #hint{left:50%;bottom:18cqh;transform:translateX(-50%);font-size:1.75cqw;letter-spacing:.25em;color:var(--gold);
+    text-shadow:0 0 .8cqw #000,0 0 .3cqw #000;white-space:nowrap;text-align:center}
+  /* 名牌 */
+  #plate{left:2.6cqw;top:4cqh;padding:.9cqw 1.3cqw;background:linear-gradient(180deg,#1c120ae6,#140c06e6);
+    border-left:.35cqw solid var(--red);box-shadow:0 0 1.5cqw #000a}
+  #plate b{display:block;font-size:2.5cqw;letter-spacing:.3em;color:#fff}
+  #plate span{display:block;margin-top:.4cqw;font-size:1.25cqw;letter-spacing:.12em;color:#d8c39a}
+  #awe{margin-top:.6cqw;font-size:1.15cqw;color:var(--gold);letter-spacing:.15em}
+  #awe i{display:inline-block;width:.35cqw;height:1.5cqw;margin-left:.45cqw;background:var(--gold);vertical-align:middle;
+    box-shadow:0 -.5cqw .7cqw #ff9a3c;transition:opacity .4s,background .4s}
+  #awe i.out{background:#444;box-shadow:none;opacity:.5}
+  /* 供词 */
+  #sts{left:2.6cqw;top:27cqh;width:39cqw;display:flex;flex-direction:column;gap:1.1cqw}
+  .st{padding:1cqw 1.3cqw;font-size:1.6cqw;line-height:1.55;letter-spacing:.06em;color:#f3e9d2;text-align:left;
+    background:#1a1009cc;border:1px solid #7a5a2e;cursor:pointer;opacity:0;transform:translateX(-2cqw);
+    transition:opacity .5s,transform .5s,border-color .2s,background .2s,box-shadow .2s;font-family:inherit}
+  .st.in{opacity:1;transform:none}
+  .st:hover{border-color:var(--cyan)}
+  .st.sel{border-color:var(--gold);background:#2a1c08e0;box-shadow:0 0 1.4cqw #e8c27a66}
+  .st.broken{border-color:var(--red);background:#3a0d0be0;color:#ffb3a8;text-decoration:line-through;cursor:default}
+  #sts.roster{top:21cqh;width:37cqw;gap:.55cqw}
+  #sts.roster .st{padding:.5cqw 1cqw;font-size:1.3cqw;line-height:1.45}
+  #sts.roster .st small{font-size:.95cqw;margin-bottom:0}
+  .st small{display:block;font-size:1.05cqw;color:#c9a86a;letter-spacing:.2em;margin-bottom:.2cqw}
+  /* 亡魂的话 */
+  #say{left:50%;bottom:25cqh;transform:translateX(-50%);max-width:62cqw;padding:.8cqw 1.8cqw;font-size:1.9cqw;letter-spacing:.1em;
+    color:#fff;background:#000a;border-top:1px solid #e0c18455;border-bottom:1px solid #e0c18455;text-align:center;text-shadow:0 0 .6cqw #000}
+  /* 孽镜台 */
+  #mirror{right:2.6cqw;top:5cqh;width:35cqw;padding:.5cqw;background:#150d07d0;border:.18cqw solid var(--cyan);
+    box-shadow:0 0 2.2cqw #a8742caa, inset 0 0 1.5cqw #a8742c55;transform-origin:100% 0}
+  #mirror.hide{transform:scale(.6)}
+  #mirror video{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;filter:saturate(.85) contrast(1.05)}
+  #mirror h4{margin:0 0 .4cqw;font-size:1.3cqw;font-weight:normal;letter-spacing:.5em;color:var(--cyan)}
+  #mirror p{margin:.5cqw 0 .1cqw;font-size:1.15cqw;letter-spacing:.12em;color:#e2d2ac}
+  /* 案桌法器 */
+  #desk{left:0;right:0;bottom:2.2cqh;display:flex;justify-content:center;align-items:flex-end;gap:3cqw}
+  .tool{font-family:inherit;cursor:pointer;border:none;background:none;color:#f6e7c9;padding:0;display:flex;flex-direction:column;align-items:center;gap:.5cqw;
+    font-size:1.25cqw;letter-spacing:.3em;text-shadow:0 0 .5cqw #000;transition:transform .15s,filter .2s,opacity .4s}
+  .tool:hover{filter:brightness(1.25)}
+  .tool[disabled]{opacity:.35;cursor:default;filter:grayscale(.6)}
+  #gavel .block{width:11cqw;height:4.6cqw;border-radius:.5cqw;position:relative;
+    background:linear-gradient(180deg,#8a3a22 0%,#5b1f12 55%,#32100a 100%);
+    border:.16cqw solid var(--gold);box-shadow:0 .9cqw 1.4cqw #000c, inset 0 .3cqw .5cqw #ffffff33}
+  #gavel .block::after{content:"惊堂木";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:var(--gold);font-size:1.5cqw;letter-spacing:.4em;text-indent:.4em}
+  #gavel.pulse .block{animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 .9cqw 1.4cqw #000c,0 0 0 #e8c27a00}50%{box-shadow:0 .9cqw 1.4cqw #000c,0 0 2.4cqw #e8c27acc}}
+  #gavel.slam .block{animation:slam .32s}
+  @keyframes slam{0%{transform:translateY(-5cqw) rotate(-8deg)}55%{transform:translateY(.9cqw) rotate(0)}100%{transform:none}}
+  #mbtn .disc{width:4.6cqw;height:4.6cqw;border-radius:50%;border:.16cqw solid var(--cyan);
+    background:radial-gradient(circle at 35% 30%,#fff3d0,#a8742c 45%,#2a1808 100%);box-shadow:0 0 1.4cqw #a8742c99}
+  /* 报应牌 */
+  #cards{left:0;right:0;top:17cqh;display:flex;justify-content:center;gap:2.4cqw}
+  #cards h3{position:absolute;top:-7cqh;left:0;right:0;margin:0;text-align:center;font-weight:normal;font-size:2.2cqw;letter-spacing:.5em;color:var(--gold);text-shadow:0 0 .8cqw #000}
+  .card{width:19cqw;height:29cqw;padding:1.6cqw 1.3cqw;font-family:inherit;cursor:pointer;text-align:center;color:#2a1508;
+    background:linear-gradient(180deg,#f3e6c6,#dcc79a);border:.25cqw solid #6b1a12;outline:.12cqw solid var(--gold);outline-offset:-.7cqw;
+    box-shadow:0 1.2cqw 2.5cqw #000d;transition:transform .25s,box-shadow .25s,opacity .4s;transform:translateY(0) rotate(var(--r,0deg))}
+  .card:hover{transform:translateY(-1.2cqw) rotate(0deg);box-shadow:0 2cqw 3.5cqw #000e,0 0 2cqw #e8c27a88}
+  .card em{display:block;font-style:normal;font-size:1.1cqw;letter-spacing:.5em;color:#8a2a1e;margin-top:.6cqw}
+  .card b{display:block;font-size:3.1cqw;line-height:1.2;letter-spacing:.12em;margin:1.6cqw auto 1.2cqw;writing-mode:vertical-rl;white-space:nowrap;height:15cqw}
+  .card p{margin:0;font-size:1.2cqw;line-height:1.6;letter-spacing:.05em;color:#4a2a14}
+  .card.gone{opacity:0;transform:translateY(3cqw) scale(.9);pointer-events:none}
+  .card.pick{transform:translateY(-1.5cqw) scale(1.06);box-shadow:0 0 3cqw #e8c27a}
+  /* 大印 */
+  #seal{left:50%;top:44%;width:17cqw;height:17cqw;margin:-8.5cqw 0 0 -8.5cqw;border:.7cqw solid var(--red);border-radius:1.2cqw;
+    display:flex;align-items:center;justify-content:center;color:var(--red);font-size:11cqw;font-weight:bold;
+    transform:rotate(-9deg) scale(3);opacity:0;pointer-events:none;text-shadow:0 0 1.5cqw #c8372b88;box-shadow:0 0 2cqw #c8372b66, inset 0 0 2cqw #c8372b44}
+  #seal.go{animation:seal 1.6s forwards}
+  @keyframes seal{0%{transform:rotate(-9deg) scale(3);opacity:0}14%{transform:rotate(-9deg) scale(1);opacity:1}75%{transform:rotate(-9deg) scale(1);opacity:1}100%{transform:rotate(-9deg) scale(1.05);opacity:0}}
+  /* 标题 */
+  #title{inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#000a,#000d)}
+  #title h1{margin:0;font-size:13cqw;font-weight:normal;letter-spacing:.35em;text-indent:.35em;color:#fff;
+    text-shadow:0 0 2.5cqw var(--cyan-d),0 0 .6cqw var(--cyan)}
+  #title p{margin:1.5cqw 0 4cqw;font-size:2.1cqw;letter-spacing:.4em;color:var(--gold)}
+  .btn{font-family:inherit;font-size:1.9cqw;letter-spacing:.6em;text-indent:.6em;padding:.8cqw 2.6cqw;color:#ffe9d6;cursor:pointer;
+    background:linear-gradient(180deg,#7a1a12,#3a0b08);border:.14cqw solid var(--gold);box-shadow:0 0 1.6cqw #c8372b77}
+  .btn:hover{filter:brightness(1.25)}
+  /* 来世字幕 */
+  #karma{left:0;right:0;bottom:8cqh;text-align:center}
+  #karma small{display:block;font-size:1.5cqw;letter-spacing:.8em;color:var(--gold);text-shadow:0 0 .6cqw #000}
+  #karma b{display:block;font-size:5cqw;font-weight:normal;letter-spacing:.4em;margin:.6cqw 0 .8cqw;text-shadow:0 0 1.2cqw #000,0 0 .4cqw #000}
+  #karma p{margin:0 0 2.2cqw;font-size:1.7cqw;letter-spacing:.15em;text-shadow:0 0 .8cqw #000,0 0 .3cqw #000}
+  /* 结算 */
+  #end{inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000b;text-align:center}
+  #end h2{margin:0 0 1.5cqw;font-size:4.2cqw;font-weight:normal;letter-spacing:.4em;color:#fff}
+  #end p{margin:.4cqw 0;font-size:1.7cqw;letter-spacing:.15em;color:#e2d2ac;line-height:1.8}
+  #end .btn{margin-top:3cqw}
+  /* 加载 */
+  #load{inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0604;z-index:9}
+  #load h1{margin:0;font-size:8cqw;font-weight:normal;letter-spacing:.4em;text-indent:.4em;color:#fff;text-shadow:0 0 2cqw var(--cyan-d)}
+  #load p{font-size:1.5cqw;letter-spacing:.3em;color:#d8c39a;margin:2cqw 0 3cqw}
+  #bar{width:30cqw;height:.35cqw;background:#123;margin-bottom:3cqw}
+  #bar i{display:block;height:100%;width:0;background:var(--cyan);box-shadow:0 0 1cqw var(--cyan);transition:width .2s}
+</style>
+</head>
+<body>
+<div id="stage"><div id="frame">
+  <video class="layer" id="vA" muted playsinline preload="auto"></video>
+  <video class="layer" id="vB" muted playsinline preload="auto"></video>
+  <div id="vig"></div>
+
+  <div class="ui hide" id="hint"></div>
+
+  <div class="ui hide" id="plate">
+    <b id="pName"></b><span id="pInfo"></span>
+    <div id="awe">威严<i></i><i></i><i></i></div>
+  </div>
+
+  <div class="ui hide" id="sts"></div>
+  <div class="ui hide" id="say"></div>
+
+  <div class="ui hide" id="mirror">
+    <h4>孽 镜 台</h4>
+    <video id="vM" muted playsinline loop preload="auto"></video>
+    <p id="mCap"></p>
+  </div>
+
+  <div class="ui hide" id="cards"></div>
+  <div class="ui" id="seal">判</div>
+
+  <div class="ui hide" id="desk">
+    <button class="tool" id="mbtn"><span class="disc"></span>照孽镜</button>
+    <button class="tool" id="gavel"><span class="block"></span>空格键</button>
+  </div>
+
+  <div class="ui hide" id="karma"><small>来 世</small><b id="kName"></b><p id="kDesc"></p><button class="btn" id="kNext">退堂</button></div>
+
+  <div class="ui hide" id="title"><h1>走马灯</h1><p>阎王叫人三更死 · 这次,笔在你手里</p><button class="btn" id="bCourt">升堂</button></div>
+
+  <div class="ui hide" id="end">
+    <h2>退　堂</h2>
+    <p id="endLine"></p>
+    <p id="endNext"></p>
+    <button class="btn" id="bAgain">再审一次</button>
+  </div>
+
+  <div id="flash"></div>
+  <div class="ui" id="load"><h1>走马灯</h1><p id="loadTxt">正在点灯……</p><div id="bar"><i></i></div><button class="btn hide" id="bStart">入殿</button></div>
+</div></div>
+
+<script>
+/* ============ 资源 ============ */
+const CLIP_NAMES = ['crowd_loop','crowd_kneel','crowd_leave','off_enter','off_idle','off_memory','off_collapse','off_kneel_loop','off_exit','karma_donkey','karma_rat','karma_beggar',
+  'bride_enter','bride_idle','bride_memory','gouhun','groom_drag','both_loop','groom_exit','bride_exit','karma_frog','karma_bearer','karma_goose',
+  'sch_enter','k1_loop','k12','k2_loop','k23','k3_loop','k34','k4_loop','k45','k5_loop','k56','k6_loop','m1','m2','m3','m4','m5','gouhun2','end_release','end_back','end_bridge','end_chained'];
+const SFX_NAMES  = ['gavel','crowd','mirror','stamp','vortex','ambience','card'];
+const CLIPS = {}, SFX = {};
+const $ = id => document.getElementById(id);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function toBlobUrl(src){ const r = await fetch(src); return URL.createObjectURL(await r.blob()); }
+async function loadAll(){
+  const total = CLIP_NAMES.length + SFX_NAMES.length; let done = 0;
+  const tick = () => { $('bar').firstElementChild.style.width = (++done/total*100) + '%'; };
+  const inlineV = window.CLIPS_DATA, inlineA = window.SFX_DATA;
+  for (const n of CLIP_NAMES){
+    // 单文件版:内嵌的 base64 转成 blob 地址;文件夹版:直接用相对路径
+    CLIPS[n] = inlineV ? await toBlobUrl(inlineV[n]) : n + '.mp4'; tick();
+  }
+  for (const n of SFX_NAMES){
+    const a = new Audio(inlineA ? await toBlobUrl(inlineA['sfx_'+n]) : 'audio/sfx_' + n + '.mp3');
+    a.preload = 'auto'; SFX[n] = a; tick();
+  }
+  // 网页版:开场三段先下载好再开始,其余按出场顺序在后台下载,避免玩到一半等视频
+  if (!inlineV){
+    let ready; const first = new Promise(r => ready = r);
+    (async () => { for (const n of CLIP_NAMES){ try { CLIPS[n] = await toBlobUrl(n + '.mp4'); } catch(e){} if (n === 'crowd_leave') ready(); } })();
+    await first;
+  }
+}
+function sfx(name, {loop=false, vol=1} = {}){ const a = SFX[name]; if(!a) return; a.loop = loop; a.volume = vol; a.currentTime = 0; a.play().catch(()=>{}); return a; }
+function fadeOut(name, ms=800){ const a = SFX[name]; if(!a || a.paused) return; const v0 = a.volume, t0 = performance.now();
+  (function step(){ const k = Math.min(1,(performance.now()-t0)/ms); a.volume = v0*(1-k); if(k<1) requestAnimationFrame(step); else a.pause(); })(); }
+
+/* ============ 视频舞台:两个播放器交替,新画面出帧后才切换 ============ */
+const frame = $('frame'), layers = [$('vA'), $('vB')]; let cur = 0;
+function play(name, {loop=false, holdEnd=false} = {}){
+  return new Promise(resolve => {
+    const next = layers[1-cur], prev = layers[cur]; cur = 1-cur;
+    next.loop = loop; next.onended = null; next.src = CLIPS[name];
+    const swap = () => { next.classList.add('on'); prev.classList.remove('on'); prev.pause(); if(loop) resolve(); };
+    if (holdEnd){            // 直接停在最后一帧,用来回到某个静止画面
+      next.onloadedmetadata = () => { next.currentTime = Math.max(0, next.duration - 0.04); };
+      next.onseeked = () => { next.onseeked = null; swap(); resolve(); };
+      next.load(); return;
+    }
+    next.onloadedmetadata = null; next.onseeked = null;
+    next.addEventListener('playing', () => {
+      if (next.requestVideoFrameCallback) next.requestVideoFrameCallback(swap); else swap();
+    }, {once:true});
+    if (!loop) next.onended = () => resolve();
+    next.currentTime = 0; next.play().catch(()=>{});
+  });
+}
+function shake(small){ const c = small ? 'shake-s' : 'shake'; frame.classList.remove('shake','shake-s'); void frame.offsetWidth; frame.classList.add(c); }
+function flash(){ const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+const show = (id, on=true) => $(id).classList.toggle('hide', !on);
+function hint(t){ $('hint').innerHTML = t || ''; show('hint', !!t); }
+async function say(t, hold=0){ $('say').textContent = t; show('say', !!t); if(hold){ await wait(hold); show('say', false); } }
+
+/* ============ 案件数据:加案子只需要加数据 ============ */
+const CASE1 = {
+  name:'钱有德', info:'生前 · 知府　卒年五十八　死因 · 病',
+  clips:{enter:'off_enter', idle:'off_idle', collapse:'off_collapse', kneel:'off_kneel_loop', exit:'off_exit'},
+  memory:{clip:'off_memory', cap:'走马灯 · 某夜,府衙地窖'},
+  statements:[
+    {text:'本官为官三十载,两袖清风,家无余财。', lie:true},
+    {text:'本官是寿终正寝,死在自家床上的。', lie:false, retort:'簿上写着"病",这句不假。大人莫不是没看清?'},
+    {text:'区区一个判官,也配审我?叫阎王来见我!', lie:false, retort:'哈哈哈!拍得再响,本官也不怕你。'}
+  ],
+  open:'堂下何人?报上名来。', plea:'大人饶命!下官……下官只是一时糊涂啊!',
+  karma:[
+    {key:'karma_donkey', name:'驮金之驴', desc:'生前贪金,来世日日驮金,一锭也不是他的。'},
+    {key:'karma_rat',    name:'空仓之鼠', desc:'生前掏空官仓,来世守着一口空缸。'},
+    {key:'karma_beggar', name:'衙前乞丐', desc:'生前高坐衙门,来世跪在衙门口。'}
+  ]
+};
+// 第二案:冤魂不说谎,凶手还活着 —— 从走马灯里认出那只手,朱笔勾魂
+const CASE2 = {
+  name:'柳三娘', info:'生前 · 新妇　卒年十九　死因 · 投井自尽',
+  clips:{enter:'bride_enter', idle:'bride_idle', exit:'groom_exit'},
+  memory:{clip:'bride_memory', cap:'走马灯 · 成亲当夜,井底'},
+  open:'民女柳三娘。簿上写我投井自尽 —— 大人,我没有跳。',
+  statements:[
+    {who:'周老夫人 · 婆婆', text:'嫌新妇嫁妆寒酸。腕上一对金镯,从不离身。', lie:false, retort:'孽镜里那只手戴的是扳指,不是金镯。阳寿未尽之人,岂可错勾!'},
+    {who:'周文彬 · 丈夫', text:'成亲当夜新妇"投井",三月后另娶盐商之女。右手拇指常戴一枚翠玉扳指。', lie:true},
+    {who:'阿福 · 周家长工', text:'当夜守在后院。双手粗糙,右手缺了小指。', lie:false, retort:'孽镜里那只手五指俱全。再看清楚些。'}
+  ],
+  karma:[
+    {key:'karma_frog',   name:'井底之蛙', desc:'把人推下井,来世就住在井底。'},
+    {key:'karma_bearer', name:'抬轿之夫', desc:'骗了一场花轿,来世抬一辈子花轿。'},
+    {key:'karma_goose',  name:'失群孤雁', desc:'负了结发之人,来世失偶独飞。'}
+  ]
+};
+// 第三案(大案):替身 —— 每个冤魂都是下一个冤魂的凶手,顺着手一环一环往回追
+const CASE3 = {
+  name:'陈望', info:'生前 · 书生　卒年二十一　死因 · 失足落水',
+  clips:{exit:'end_release'},
+  cardTitle:'如 何 了 结', karmaLabel:'结 局', cardTag:'判词',
+  karma:[
+    {id:'law',   name:'依律行事', desc:'水鬼须得替身方可超生。陈望回桥下,等下一个人。', exit:'end_back', key:'end_bridge',
+     after:'落月桥下,又多了一只等待的手。再过几年,这条链还会更长。'},
+    {id:'merit', name:'折我功德', desc:'判官自折功德,替五人赎身。此后,你不再是判官。', exit:'end_release', key:null,
+     after:'五条锁链尽断。你的功德簿空了 —— 下一个站在堂下的,是你。'},
+    {id:'swap',  name:'让他来替', desc:'判沈万钧永镇桥下,一人替尽五人,永无替身。', exit:'end_release', key:'end_chained',
+     after:'五人往生。沈万钧永镇落月桥下 —— 他修的桥,从此真的保人平安。'}
+  ]
+};
+const ROSTER = [
+  {id:'ling', when:'三年前', who:'阿菱 · 船娘',       mark:'右腕系一根红绳,娘给求的平安绳。'},
+  {id:'liu',  when:'五年前', who:'柳氏 · 盐商之妻',   mark:'腕上一只碧玉镯。'},
+  {id:'su',   when:'六年前', who:'苏氏 · 绣娘',       mark:'左腕一只银镯,出嫁时的陪嫁。'},
+  {id:'zhao', when:'七年前', who:'赵大 · 樵夫',       mark:'手背一道长刀疤,十指俱全。'},
+  {id:'he',   when:'八年前', who:'何伯 · 老渔夫',     mark:'右手断了一指,早年被网绳绞的。'},
+  {id:'girl', when:'十年前', who:'无名女 · 卖花为生', mark:'不能言语。腕上总缠一圈白野花。'}
+];
+const LINKS = [
+  {ans:'ling', mem:'m1', cap:'走马灯 · 陈望 · 昨夜,落月桥下', clue:'拽他的那只手,腕上系着一根红绳。', arrive:'k12', loop:'k2_loop',
+   plate:['阿菱','水鬼 · 三年前溺于落月桥'], lines:['阿菱:是我拽的。我在桥下等了三年,就等一个替身。','阿菱:可是大人 —— 三年前,我也是被拽下去的。']},
+  {ans:'su', mem:'m2', cap:'走马灯 · 阿菱 · 三年前,落月桥下', clue:'拽她的那只手,戴着一只银镯。', arrive:'k23', loop:'k3_loop',
+   plate:['苏氏','水鬼 · 六年前溺于落月桥'], lines:['苏氏:我认。六年了,我只想回去看一眼孩子。','苏氏:当年拽我的那只手……又老又糙。']},
+  {ans:'he', mem:'m3', cap:'走马灯 · 苏氏 · 六年前,落月桥下', clue:'拽她的是一只老手 —— 断了一指。', arrive:'k34', loop:'k4_loop',
+   plate:['何伯','水鬼 · 八年前溺于落月桥'], lines:['何伯:老汉认罪。水底太冷了,大人。','何伯:八年前拽老汉的那只手……小得像个孩子。']},
+  {ans:'girl', mem:'m4', cap:'走马灯 · 何伯 · 八年前,落月桥下', clue:'拽他的那只手很小,腕上缠着白花。', arrive:'k45', loop:'k5_loop',
+   plate:['无名女','水鬼 · 十年前溺于落月桥'], lines:['她张了张嘴,没有声音。','她是这条链上的第一个。那么 —— 是谁把她拽下去的?']}
+];
+const LIVING = [
+  {who:'刘知县', text:'十年前到任本县。右手一枚官印金戒。', lie:false, retort:'那只手上没有戒指,只有佛珠。阳寿未尽之人,岂可错勾!'},
+  {who:'沈万钧 · 沈员外', text:'落月桥十年前由他捐修。施粥修庙,人称"沈大善人"。腕上一串紫檀佛珠,从不离手。', lie:true},
+  {who:'孙更夫', text:'夜夜过桥打更。两手空空,只提一面铜锣。', lie:false, retort:'那只手白胖富贵,不是打更人的手。再看。'}
+];
+let CASE = CASE1;
+
+/* ============ 流程 ============ */
+let state = 'load', selected = -1, awe = 3, mirrorSeen = false, gavelResolve = null, mirrorResolve = null, verdicts = [];
+
+function gavelHit(){
+  if ($('gavel').disabled) return;
+  const g = $('gavel'); g.classList.remove('slam'); void g.offsetWidth; g.classList.add('slam');
+  if (state === 'trial' && selected < 0){ hint('先选中一句供词,再拍惊堂木'); return; }
+  sfx('gavel'); shake(state === 'trial' && !CASE.statements[selected].lie);
+  if (gavelResolve){ const r = gavelResolve; gavelResolve = null; r(); }
+}
+const waitGavel = () => new Promise(r => gavelResolve = r);
+$('gavel').onclick = gavelHit;
+addEventListener('keydown', e => { if (e.code === 'Space'){ e.preventDefault(); gavelHit(); } });
+
+function openMirror(on){
+  if (on){ $('vM').src = CLIPS[CASE.memory.clip]; $('vM').play().catch(()=>{}); $('mCap').textContent = CASE.memory.cap; sfx('mirror',{vol:.7}); mirrorSeen = true; if (mirrorResolve){ const r = mirrorResolve; mirrorResolve = null; r(); } }
+  else $('vM').pause();
+  show('mirror', on);
+}
+$('mbtn').onclick = () => openMirror($('mirror').classList.contains('hide'));
+
+function setAwe(){ [...$('awe').querySelectorAll('i')].forEach((el,i) => el.classList.toggle('out', i >= awe)); }
+
+async function intro(){
+  state = 'intro'; CASE = CASE1; verdicts = []; awe = 3; setAwe(); mirrorSeen = false; selected = -1;
+  ['plate','sts','say','mirror','cards','karma','title','end'].forEach(id => show(id,false));
+  await play('crowd_loop', {loop:true});
+  sfx('crowd', {loop:true, vol:.8});
+  show('desk'); $('mbtn').style.visibility = 'hidden'; $('gavel').style.visibility = 'visible'; $('gavel').disabled = false; $('gavel').classList.add('pulse');
+  hint('满堂喧哗 —— 拍下惊堂木');
+  await waitGavel();
+  $('gavel').classList.remove('pulse'); $('gavel').disabled = true; hint(''); flash(); fadeOut('crowd', 500);
+  await play('crowd_kneel');
+  show('title'); show('desk', false);
+}
+$('bCourt').onclick = async () => {
+  show('title', false); sfx('ambience', {loop:true, vol:.5});
+  await play('crowd_leave');
+  trial();
+};
+
+async function trial(){
+  state = 'enter';
+  hint('带第一个亡魂');
+  await play(CASE.clips.enter);
+  await play(CASE.clips.idle, {loop:true});
+  $('pName').textContent = CASE.name; $('pInfo').textContent = CASE.info; show('plate'); hint('');
+  await say(CASE.open, 1600);
+
+  // 供词逐句出现
+  const box = $('sts'); box.innerHTML = ''; show('sts');
+  CASE.statements.forEach((s,i) => {
+    const b = document.createElement('button'); b.className = 'st'; b.innerHTML = '<small>供词 · ' + '一二三'[i] + '</small>' + s.text;
+    b.onclick = () => { if (state !== 'trial' || b.classList.contains('broken')) return; selected = i; [...box.children].forEach(c => c.classList.toggle('sel', c === b)); hint('拍下惊堂木,当堂戳破'); };
+    box.appendChild(b);
+  });
+  for (const b of box.children){ await wait(900); b.classList.add('in'); }
+  await wait(500);
+  state = 'trial'; show('desk'); $('mbtn').style.visibility = 'visible'; $('gavel').disabled = false;
+  hint('他哪一句在说谎?先照孽镜,再选中那一句');
+
+  // 直到拍中谎话
+  for(;;){
+    await waitGavel();
+    const s = CASE.statements[selected];
+    if (s.lie) break;
+    awe = Math.max(0, awe-1); setAwe();
+    await say(s.retort, 2400);
+    box.children[selected].classList.remove('sel'); selected = -1;
+    hint(awe ? '拍错了,威严受损。再看看孽镜' : '威严扫地……照一照孽镜吧');
+  }
+  state = 'busted'; $('gavel').disabled = true; flash();
+  box.children[selected].classList.add('broken'); box.children[selected].classList.remove('sel');
+  hint('');
+  if ($('mirror').classList.contains('hide')) openMirror(true);
+  await say('孽镜在此,你还有何话说?', 0);
+  await wait(mirrorSeen ? 1500 : 2600);
+  show('say', false);
+  await play(CASE.clips.collapse);
+  await play(CASE.clips.kneel, {loop:true});
+  await say(CASE.plea, 2400);
+  verdict();
+}
+
+async function verdict(){
+  state = 'verdict'; show('sts', false); show('desk', false); openMirror(false);
+  const box = $('cards'); box.innerHTML = '<h3>' + (CASE.cardTitle || '判 他 来 世') + '</h3>';
+  CASE.karma.forEach((k,i) => {
+    const c = document.createElement('button'); c.className = 'card gone'; c.style.setProperty('--r', (i-1)*3 + 'deg');
+    c.innerHTML = '<em>' + (CASE.cardTag || '轮回签') + '</em><b>' + k.name + '</b><p>' + k.desc + '</p>';
+    c.onclick = () => choose(k, c);
+    box.appendChild(c);
+  });
+  show('cards');
+  for (const c of box.querySelectorAll('.card')){ await wait(180); sfx('card',{vol:.8}); c.classList.remove('gone'); }
+}
+
+async function choose(k, card){
+  if (state !== 'verdict') return; state = 'sealed';
+  for (const c of $('cards').querySelectorAll('.card')) c.classList.add(c === card ? 'pick' : 'gone');
+  await wait(450);
+  const seal = $('seal'); seal.classList.remove('go'); void seal.offsetWidth; seal.classList.add('go');
+  await wait(220); sfx('stamp'); shake(true);
+  await wait(1100); show('cards', false); show('plate', false);
+  sfx('vortex', {vol:.8});
+  await play(k.exit || CASE.clips.exit);
+  await wait(300);
+  // 来世
+  fadeOut('ambience', 600);
+  if (k.key) await play(k.key, {loop:true});
+  $('karma').querySelector('small').textContent = CASE.karmaLabel || '来 世';
+  $('kName').textContent = k.name; $('kDesc').textContent = k.after || k.desc; show('karma');
+  $('kNext').onclick = () => { show('karma', false); verdicts.push(k.name); CASE.after(k); };
+}
+
+CASE1.after = async () => {
+  await play(CASE1.clips.exit, {holdEnd:true});
+  trial2();
+};
+
+/* ---------- 第二案:井中新娘 ---------- */
+async function trial2(){
+  CASE = CASE2; state = 'enter'; selected = -1; mirrorSeen = false;
+  sfx('ambience', {loop:true, vol:.5});
+  hint('带下一个亡魂');
+  await play(CASE.clips.enter);
+  await play(CASE.clips.idle, {loop:true});
+  $('pName').textContent = CASE.name; $('pInfo').textContent = CASE.info; show('plate'); hint('');
+  await say(CASE.open, 3200);
+
+  // 先照孽镜:她最后看见的是什么
+  show('desk'); $('mbtn').style.visibility = 'visible'; $('gavel').style.visibility = 'hidden';
+  hint('生死簿写着"自尽"。照一照孽镜,看她最后一眼看见了什么');
+  if ($('mirror').classList.contains('hide')) await new Promise(r => mirrorResolve = r);
+  hint(''); await wait(4200);
+  await say('井口那只手……拇指上戴着一枚翠玉扳指。', 2800);
+
+  // 阳间三个在世之人,选一个勾魂
+  const box = $('sts'); box.innerHTML = ''; show('sts');
+  CASE.statements.forEach((s,i) => {
+    const b = document.createElement('button'); b.className = 'st'; b.innerHTML = '<small>阳间在世 · ' + s.who + '</small>' + s.text;
+    b.onclick = () => { if (state !== 'trial' || b.classList.contains('broken')) return; selected = i; [...box.children].forEach(c => c.classList.toggle('sel', c === b)); hint('拍下惊堂木 —— 朱笔勾魂'); };
+    box.appendChild(b);
+  });
+  for (const b of box.children){ await wait(700); b.classList.add('in'); }
+  state = 'trial'; $('gavel').style.visibility = 'visible'; $('gavel').disabled = false;
+  hint('凶手还活着。是谁的手?选中他,拍惊堂木,朱笔勾魂');
+  for(;;){
+    await waitGavel();
+    const s = CASE.statements[selected];
+    if (s.lie) break;
+    awe = Math.max(0, awe-1); setAwe();
+    await say(s.retort, 2600);
+    box.children[selected].classList.remove('sel'); selected = -1;
+    hint('勾错了,威严受损。再看看孽镜里那只手');
+  }
+  state = 'busted'; $('gavel').disabled = true; hint('');
+  box.children[selected].classList.add('broken'); box.children[selected].classList.remove('sel');
+  const seal = $('seal'); seal.textContent = '勾'; seal.classList.remove('go'); void seal.offsetWidth; seal.classList.add('go');
+  await wait(220); sfx('stamp'); shake(true);
+  await say('朱笔一勾,阳寿尽销。', 1500);
+  show('sts', false); show('desk', false); openMirror(false); show('plate', false);
+
+  // 阳间喜宴上,魂被锁链拖走
+  flash(); sfx('vortex', {vol:.8});
+  hint('阳间 · 周府喜宴');
+  await play('gouhun');
+  hint(''); flash();
+  await play('groom_drag');
+  await play('both_loop', {loop:true});
+  $('pName').textContent = '周文彬'; $('pInfo').textContent = '阳寿未尽 · 朱笔勾到　罪 · 杀妻'; show('plate');
+  await say('周文彬:大、大人!我阳寿未尽啊 ——', 2400);
+  await say('柳三娘:那夜你说,井里有我掉的簪子。', 3000);
+  seal.textContent = '判';
+  verdict();
+}
+
+CASE2.after = async () => {
+  // 回到大殿,送新娘往生
+  await play('groom_exit', {holdEnd:true});
+  await play('bride_idle', {loop:true});
+  sfx('ambience', {loop:true, vol:.5});
+  $('pName').textContent = '柳三娘'; $('pInfo').textContent = '生前 · 新妇　卒年十九　死因 · 他杀(朱笔改)'; show('plate');
+  await say('柳三娘:谢大人,还我一个清白。', 2600);
+  show('plate', false);
+  await play('bride_exit');
+  trial3();
+};
+
+/* ---------- 第三案:替身 ---------- */
+function stamp(ch){ const seal = $('seal'); seal.textContent = ch; seal.classList.remove('go'); void seal.offsetWidth; seal.classList.add('go'); setTimeout(() => { sfx('stamp'); shake(true); }, 220); }
+
+// 在名册里选人,拍惊堂木确认;选对才返回
+async function pick(list, solved, labelOf, hintText, wrongHint){
+  const box = $('sts'); box.innerHTML = ''; show('sts'); selected = -1;
+  CASE.statements = list;
+  list.forEach((s,i) => {
+    const b = document.createElement('button'); b.className = 'st in' + (solved && solved.has(s.id) ? ' broken' : '');
+    b.innerHTML = '<small>' + labelOf(s) + '</small>' + s.text;
+    b.onclick = () => { if (state !== 'trial' || b.classList.contains('broken')) return; selected = i; [...box.children].forEach(c => c.classList.toggle('sel', c === b)); hint(s.confirm || '拍下惊堂木'); };
+    box.appendChild(b);
+  });
+  state = 'trial'; $('gavel').style.visibility = 'visible'; $('gavel').disabled = false; hint(hintText);
+  for(;;){
+    await waitGavel();
+    const s = list[selected];
+    if (s.lie) break;
+    awe = Math.max(0, awe-1); setAwe();
+    await say(s.retort, 2400);
+    box.children[selected].classList.remove('sel'); selected = -1; hint(wrongHint);
+  }
+  state = 'busted'; $('gavel').disabled = true; hint('');
+  box.children[selected].classList.add('broken'); box.children[selected].classList.remove('sel');
+}
+
+async function trial3(){
+  CASE = CASE3; state = 'enter'; selected = -1;
+  sfx('ambience', {loop:true, vol:.5});
+  hint('带下一个亡魂');
+  await play('sch_enter');
+  await play('k1_loop', {loop:true});
+  $('pName').textContent = CASE.name; $('pInfo').textContent = CASE.info; show('plate'); hint('');
+  await say('学生陈望,赶考路过落月桥。簿上说我失足 ——', 2600);
+  await say('可是大人,水里有东西拽我的脚!', 2600);
+  show('desk'); $('mbtn').style.visibility = 'visible'; $('gavel').style.visibility = 'hidden';
+  $('sts').classList.add('roster');
+
+  const solved = new Set();
+  for (const L of LINKS){
+    CASE.memory = {clip:L.mem, cap:L.cap}; openMirror(true);
+    await wait(3600);
+    await say(L.clue, 2600);
+    const list = ROSTER.map(r => ({id:r.id, text:r.who + ' —— ' + r.mark, when:r.when, lie:r.id === L.ans, retort:'孽镜里那只手不是这样的。再看清楚。', confirm:'拍下惊堂木 —— 传唤此鬼'}));
+    await pick(list, solved, s => s.when + ' · 溺于落月桥', '落月桥溺亡名册 —— 是谁的手?选中,拍惊堂木传唤', '传错了,威严受损。再看看孽镜里那只手');
+    solved.add(L.ans);
+    stamp('传'); await wait(1300);
+    show('sts', false); openMirror(false); show('plate', false);
+    sfx('vortex', {vol:.5});
+    await play(L.arrive);
+    await play(L.loop, {loop:true});
+    $('pName').textContent = L.plate[0]; $('pInfo').textContent = L.plate[1]; show('plate');
+    for (const line of L.lines) await say(line, 3000);
+  }
+
+  // 链的源头:不是水鬼,是活人
+  CASE.memory = {clip:'m5', cap:'走马灯 · 无名女 · 十年前,落月桥上'}; openMirror(true);
+  await wait(3800);
+  await say('没有手从水里拽她。是有人在桥上,推了她。', 3000);
+  await say('那只手腕缠佛珠 —— 溺亡名册上没有这个人。他还活着。', 3200);
+  $('sts').classList.remove('roster');
+  LIVING[1].confirm = '他是万民称颂的大善人。确定是他? —— 拍下惊堂木,朱笔勾魂';
+  LIVING[0].confirm = LIVING[2].confirm = '拍下惊堂木 —— 朱笔勾魂';
+  await pick(LIVING, null, s => '阳间在世 · ' + s.who, '凶手还活着。是谁的手?选中,拍惊堂木,朱笔勾魂', '勾错了,威严受损。再看看孽镜里那只手');
+  stamp('勾');
+  await say('朱笔一勾,阳寿尽销。', 1500);
+  show('sts', false); show('desk', false); openMirror(false); show('plate', false);
+  flash(); sfx('vortex', {vol:.8}); hint('阳间 · 落月桥头,万民伞下');
+  await play('gouhun2');
+  hint(''); flash();
+  await play('k56');
+  await play('k6_loop', {loop:true});
+  $('pName').textContent = '沈万钧'; $('pInfo').textContent = '阳寿未尽 · 朱笔勾到　人称 · 沈大善人'; show('plate');
+  await say('沈万钧:冤枉!我修桥施粥十年,功德簿上一笔一笔都记着!', 3200);
+  await say('桥是十年前修的。她,是十年前死的。', 3000);
+  await say('沈万钧:……她看见我凿沉了赈灾的粮船。一个哑巴,偏偏会写字。', 3600);
+  await say('你修的不是桥,是她的坟。此后每隔两三年,桥下就多一条命。', 3600);
+  await say('依阴律:水鬼须得替身,方可超生。五条冤魂,都在等你一句话。', 3600);
+  $('seal').textContent = '判';
+  verdict();
+}
+
+CASE3.after = k => {
+  fadeOut('ambience', 800);
+  $('endLine').innerHTML = '钱有德 · 来世为「' + verdicts[0] + '」<br>周文彬 · 朱笔勾魂,来世为「' + verdicts[1] + '」<br>替身案 · ' + k.name + (awe === 3 ? '<br>三案无一错判,威严无损。' : '<br>威严尚余 ' + awe + ' 分。');
+  $('endNext').textContent = '结局 ' + (CASE3.karma.indexOf(k)+1) + ' / 3 —— 再审一次,可以换一种了结';
+  show('end');
+};
+$('bAgain').onclick = () => intro();
+
+/* ============ 启动 ============ */
+loadAll().then(() => { $('loadTxt').textContent = '灯已点齐'; show('bStart'); })
+  .catch(e => { $('loadTxt').textContent = '资源加载失败:' + e.message; });
+$('bStart').onclick = () => { show('load', false); intro(); };
+</script>
+</body>
+</html>
