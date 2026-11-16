@@ -44,17 +44,22 @@
   .st:hover{border-color:var(--cyan)}
   .st.sel{border-color:var(--gold);background:#2a1c08e0;box-shadow:0 0 1.4cqw #e8c27a66}
   .st.broken{border-color:var(--red);background:#3a0d0be0;color:#ffb3a8;text-decoration:line-through;cursor:default}
-  #sts.roster{top:21cqh;width:37cqw;gap:.55cqw}
-  #sts.roster .st{padding:.5cqw 1cqw;font-size:1.3cqw;line-height:1.45}
+  #sts.roster{top:21cqh;width:42cqw;gap:.5cqw}
+  #sts.roster .st{padding:.45cqw 1cqw;font-size:1.2cqw;line-height:1.45}
   #sts.roster .st small{font-size:.95cqw;margin-bottom:0}
   .st small{display:block;font-size:1.05cqw;color:#c9a86a;letter-spacing:.2em;margin-bottom:.2cqw}
   /* 亡魂的话 */
-  #say{left:50%;bottom:25cqh;transform:translateX(-50%);max-width:62cqw;padding:.8cqw 1.8cqw;font-size:1.9cqw;letter-spacing:.1em;
+  #say{z-index:7;left:50%;bottom:25cqh;transform:translateX(-50%);max-width:62cqw;padding:.8cqw 1.8cqw;font-size:1.9cqw;letter-spacing:.1em;
     color:#fff;background:#000a;border-top:1px solid #e0c18455;border-bottom:1px solid #e0c18455;text-align:center;text-shadow:0 0 .6cqw #000}
   /* 孽镜台 */
   #mirror{right:2.6cqw;top:5cqh;width:35cqw;padding:.5cqw;background:#150d07d0;border:.18cqw solid var(--cyan);
     box-shadow:0 0 2.2cqw #a8742caa, inset 0 0 1.5cqw #a8742c55;transform-origin:100% 0}
   #mirror.hide{transform:scale(.6)}
+  #mirror{cursor:zoom-in;transition:opacity .4s,transform .4s,width .3s,right .3s,top .3s}
+  #mirror.big{width:64cqw;right:18cqw;top:7cqh;z-index:6;cursor:zoom-out}
+  #rules{right:2.6cqw;top:47cqh;width:33cqw;padding:.8cqw 1.1cqw;background:#150d07d8;border:1px solid #7a5a2e;font-size:1.15cqw;line-height:1.7;letter-spacing:.06em;color:#e2d2ac}
+  #rules h4{margin:0 0 .3cqw;font-size:1.2cqw;font-weight:normal;letter-spacing:.5em;color:var(--gold)}
+  #rules p{margin:0}
   #mirror video{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;filter:saturate(.85) contrast(1.05)}
   #mirror h4{margin:0 0 .4cqw;font-size:1.3cqw;font-weight:normal;letter-spacing:.5em;color:var(--cyan)}
   #mirror p{margin:.5cqw 0 .1cqw;font-size:1.15cqw;letter-spacing:.12em;color:#e2d2ac}
@@ -141,6 +146,7 @@
     <p id="mCap"></p>
   </div>
 
+  <div class="ui hide" id="rules"><h4>阴 律</h4><p>一 · 水鬼离不开自己溺死的那片水。</p><p>二 · 拽到替身,当即超生离水 —— 同一片水里,只有一个水鬼。</p><p>三 · 尸身捞起、做过超度的,不成水鬼。</p></div>
   <div class="ui hide" id="cards"></div>
   <div class="ui" id="seal">判</div>
 
@@ -169,7 +175,7 @@
 const CLIP_NAMES = ['crowd_loop','crowd_kneel','crowd_leave','off_enter','off_idle','off_memory','off_collapse','off_kneel_loop','off_exit','karma_donkey','karma_rat','karma_beggar',
   'bride_enter','bride_idle','bride_memory','gouhun','groom_drag','both_loop','groom_exit','bride_exit','karma_frog','karma_bearer','karma_goose',
   'sch_enter','k1_loop','k12','k2_loop','k23','k3_loop','k34','k4_loop','k45','k5_loop','k56','k6_loop','m1','m2','m3','m4','m5','gouhun2','end_release','end_back','end_bridge','end_chained'];
-const SFX_NAMES  = ['gavel','crowd','mirror','stamp','vortex','ambience','card'];
+const SFX_NAMES  = ['gavel','crowd','mirror','stamp','vortex','ambience','card','bgm'];
 const CLIPS = {}, SFX = {};
 const $ = id => document.getElementById(id);
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -248,9 +254,9 @@ const CASE2 = {
   memory:{clip:'bride_memory', cap:'走马灯 · 成亲当夜,井底'},
   open:'民女柳三娘。簿上写我投井自尽 —— 大人,我没有跳。',
   statements:[
-    {who:'周老夫人 · 婆婆', text:'嫌新妇嫁妆寒酸。腕上一对金镯,从不离身。', lie:false, retort:'孽镜里那只手戴的是扳指,不是金镯。阳寿未尽之人,岂可错勾!'},
-    {who:'周文彬 · 丈夫', text:'成亲当夜新妇"投井",三月后另娶盐商之女。右手拇指常戴一枚翠玉扳指。', lie:true},
-    {who:'阿福 · 周家长工', text:'当夜守在后院。双手粗糙,右手缺了小指。', lie:false, retort:'孽镜里那只手五指俱全。再看清楚些。'}
+    {who:'周老爷 · 公公', text:'祖传翠玉扳指一对,父子各戴一枚。当夜穿酱色寿纹袍,在前厅陪客到天明。', lie:false, retort:'扳指对得上 —— 可孽镜里那只袖口是大红的。当夜穿红的不是他。'},
+    {who:'周文彬 · 丈夫', text:'祖传扳指一枚。自称当夜醉倒前厅,没进过后院。三月后另娶盐商之女。', lie:true},
+    {who:'阿福 · 长工', text:'右手缺一根小指。当夜有人看见他在后院井边打水。', lie:false, retort:'他确实到过井边 —— 可孽镜里那只手五指俱全,还戴着扳指。'}
   ],
   karma:[
     {key:'karma_frog',   name:'井底之蛙', desc:'把人推下井,来世就住在井底。'},
@@ -273,27 +279,42 @@ const CASE3 = {
   ]
 };
 const ROSTER = [
-  {id:'ling', when:'三年前', who:'阿菱 · 船娘',       mark:'右腕系一根红绳,娘给求的平安绳。'},
-  {id:'liu',  when:'五年前', who:'柳氏 · 盐商之妻',   mark:'腕上一只碧玉镯。'},
-  {id:'su',   when:'六年前', who:'苏氏 · 绣娘',       mark:'左腕一只银镯,出嫁时的陪嫁。'},
-  {id:'zhao', when:'七年前', who:'赵大 · 樵夫',       mark:'手背一道长刀疤,十指俱全。'},
-  {id:'he',   when:'八年前', who:'何伯 · 老渔夫',     mark:'右手断了一指,早年被网绳绞的。'},
-  {id:'girl', when:'十年前', who:'无名女 · 卖花为生', mark:'不能言语。腕上总缠一圈白野花。'}
+  {id:'ling', years:3,  when:'三年前 · 溺于落月桥下',   who:'阿菱 · 船娘',       mark:'尸首未获。其母年年端午到庙里为她求一根平安绳。'},
+  {id:'liu',  years:5,  when:'五年前 · 溺于落月桥下',   who:'柳氏 · 盐商之妻',   mark:'腕上常戴银镯。尸首三日后捞起,夫家请僧人做足七日超度。',
+   why:'柳氏的尸身捞起来了,还做足了七日超度。阴律第三条 —— 她成不了水鬼。'},
+  {id:'su',   years:6,  when:'六年前 · 溺于落月桥下',   who:'苏氏 · 绣娘',       mark:'尸首未获。出嫁时娘家陪了一只银镯,从不离腕。'},
+  {id:'zhao', years:7,  when:'七年前 · 溺于上游青石滩', who:'赵大 · 樵夫',       mark:'尸首未获。早年砍柴,自断一指。',
+   why:'赵大溺在上游青石滩。阴律第一条 —— 水鬼离不开自己那片水。'},
+  {id:'he',   years:8,  when:'八年前 · 溺于落月桥下',   who:'何伯 · 老渔夫',     mark:'尸首未获。右手一指早年被网绳绞断。'},
+  {id:'girl', years:10, when:'十年前春 · 溺于落月渡口', who:'无名女 · 卖花为生', mark:'尸首未获。不能言语,无人认领。那时渡口还只有一座木栈桥。'}
 ];
 const LINKS = [
-  {ans:'ling', mem:'m1', cap:'走马灯 · 陈望 · 昨夜,落月桥下', clue:'拽他的那只手,腕上系着一根红绳。', arrive:'k12', loop:'k2_loop',
+  {ans:'ling', vy:0, victim:'陈望', mem:'m1', cap:'走马灯 · 陈望 · 昨夜,落月桥下', arrive:'k12', loop:'k2_loop',
    plate:['阿菱','水鬼 · 三年前溺于落月桥'], lines:['阿菱:是我拽的。我在桥下等了三年,就等一个替身。','阿菱:可是大人 —— 三年前,我也是被拽下去的。']},
-  {ans:'su', mem:'m2', cap:'走马灯 · 阿菱 · 三年前,落月桥下', clue:'拽她的那只手,戴着一只银镯。', arrive:'k23', loop:'k3_loop',
+  {ans:'su', vy:3, victim:'阿菱', mem:'m2', cap:'走马灯 · 阿菱 · 三年前,落月桥下', arrive:'k23', loop:'k3_loop',
    plate:['苏氏','水鬼 · 六年前溺于落月桥'], lines:['苏氏:我认。六年了,我只想回去看一眼孩子。','苏氏:当年拽我的那只手……又老又糙。']},
-  {ans:'he', mem:'m3', cap:'走马灯 · 苏氏 · 六年前,落月桥下', clue:'拽她的是一只老手 —— 断了一指。', arrive:'k34', loop:'k4_loop',
-   plate:['何伯','水鬼 · 八年前溺于落月桥'], lines:['何伯:老汉认罪。水底太冷了,大人。','何伯:八年前拽老汉的那只手……小得像个孩子。']},
-  {ans:'girl', mem:'m4', cap:'走马灯 · 何伯 · 八年前,落月桥下', clue:'拽他的那只手很小,腕上缠着白花。', arrive:'k45', loop:'k5_loop',
-   plate:['无名女','水鬼 · 十年前溺于落月桥'], lines:['她张了张嘴,没有声音。','她是这条链上的第一个。那么 —— 是谁把她拽下去的?']}
+  {ans:'he', vy:6, victim:'苏氏', mem:'m3', cap:'走马灯 · 苏氏 · 六年前,落月桥下', arrive:'k34', loop:'k4_loop',
+   plate:['何伯','水鬼 · 八年前溺于落月桥'], lines:['何伯:老汉认罪。苏家娘子是老汉拽的。','何伯:可这条链到老汉为止。再往前,没有了。']},
+  {ans:'girl', vy:8, victim:'何伯', mem:'m4', cap:'走马灯 · 何伯 · 八年前,落月桥下', arrive:'k45', loop:'k5_loop', lieFirst:true,
+   plate:['无名女','水鬼 · 十年前溺于落月渡口'], lines:['她张了张嘴,没有声音。','她是这条链上的第一个。那么 —— 是谁把她拽下去的?']}
 ];
+// 何伯说谎,是为了护着她
+const HE_LIES = [
+  {text:'八年前那天,老汉喝多了酒,是自己从船上栽下去的。', lie:true},
+  {text:'在水底这些年,老汉只拽过苏家娘子一个。', lie:false, retort:'孽镜照过了,拽苏氏的确是他,也只有她。这句不假。'},
+  {text:'老汉水性好。若真有东西拽,老汉挣得脱。', lie:false, retort:'这句恐怕是真的 —— 那他当年为什么没有挣?再看孽镜。'}
+];
+// 三个活人都戴佛珠,要靠袖口和时间排除
 const LIVING = [
-  {who:'刘知县', text:'十年前到任本县。右手一枚官印金戒。', lie:false, retort:'那只手上没有戒指,只有佛珠。阳寿未尽之人,岂可错勾!'},
-  {who:'沈万钧 · 沈员外', text:'落月桥十年前由他捐修。施粥修庙,人称"沈大善人"。腕上一串紫檀佛珠,从不离手。', lie:true},
-  {who:'孙更夫', text:'夜夜过桥打更。两手空空,只提一面铜锣。', lie:false, retort:'那只手白胖富贵,不是打更人的手。再看。'}
+  {who:'刘知县', text:'信佛,公堂上也捻着一串佛珠。十年前秋天到任本县。', lie:false, retort:'她是十年前春天死的。刘知县秋天才到任 —— 那时她已在水底半年了。'},
+  {who:'沈万钧 · 沈员外', text:'富甲一方,锦袍金线,腕缠紫檀佛珠。十年前夏,捐资修成落月石桥,人称"沈大善人"。', lie:true},
+  {who:'慧明 · 桥头庙僧', text:'佛珠不离手。一年四季只穿一件灰布僧衣。', lie:false, retort:'孽镜里那只袖口绣着金线。出家人不穿这个。'}
+];
+// 沈万钧的辩词:时间和地方对不上
+const SHEN_LIES = [
+  {text:'老夫修桥、施粥、建庙,十年不曾间断。功德簿上一笔一笔都记着。', lie:false, retort:'这是真的 —— 也正是最可恨的地方。再找。'},
+  {text:'老夫是十年前夏天才头一回到落月渡,见乡民涉水艰难,这才捐资修桥。', lie:true},
+  {text:'一个卖花的哑女,老夫与她素不相识,何来仇怨?', lie:false, retort:'有没有仇,孽镜照不出来。孽镜照得出的,是时间和地方。'}
 ];
 let CASE = CASE1;
 
@@ -313,16 +334,17 @@ addEventListener('keydown', e => { if (e.code === 'Space'){ e.preventDefault(); 
 
 function openMirror(on){
   if (on){ $('vM').src = CLIPS[CASE.memory.clip]; $('vM').play().catch(()=>{}); $('mCap').textContent = CASE.memory.cap; sfx('mirror',{vol:.7}); mirrorSeen = true; if (mirrorResolve){ const r = mirrorResolve; mirrorResolve = null; r(); } }
-  else $('vM').pause();
+  else { $('vM').pause(); $('mirror').classList.remove('big'); }
   show('mirror', on);
 }
 $('mbtn').onclick = () => openMirror($('mirror').classList.contains('hide'));
+$('mirror').onclick = () => $('mirror').classList.toggle('big');
 
 function setAwe(){ [...$('awe').querySelectorAll('i')].forEach((el,i) => el.classList.toggle('out', i >= awe)); }
 
 async function intro(){
   state = 'intro'; CASE = CASE1; verdicts = []; awe = 3; setAwe(); mirrorSeen = false; selected = -1;
-  ['plate','sts','say','mirror','cards','karma','title','end'].forEach(id => show(id,false));
+  ['plate','sts','say','mirror','cards','karma','title','end','rules'].forEach(id => show(id,false)); $('sts').classList.remove('roster');
   await play('crowd_loop', {loop:true});
   sfx('crowd', {loop:true, vol:.8});
   show('desk'); $('mbtn').style.visibility = 'hidden'; $('gavel').style.visibility = 'visible'; $('gavel').disabled = false; $('gavel').classList.add('pulse');
@@ -432,7 +454,8 @@ async function trial2(){
   hint('生死簿写着"自尽"。照一照孽镜,看她最后一眼看见了什么');
   if ($('mirror').classList.contains('hide')) await new Promise(r => mirrorResolve = r);
   hint(''); await wait(4200);
-  await say('井口那只手……拇指上戴着一枚翠玉扳指。', 2800);
+  hint('点孽镜可以放大。看清井口那只手:戴着什么,穿着什么');
+  await wait(2600);
 
   // 阳间三个在世之人,选一个勾魂
   const box = $('sts'); box.innerHTML = ''; show('sts');
@@ -443,7 +466,7 @@ async function trial2(){
   });
   for (const b of box.children){ await wait(700); b.classList.add('in'); }
   state = 'trial'; $('gavel').style.visibility = 'visible'; $('gavel').disabled = false;
-  hint('凶手还活着。是谁的手?选中他,拍惊堂木,朱笔勾魂');
+  hint('凶手还活着,三个人都有疑点。对照孽镜,选中他,拍惊堂木,朱笔勾魂');
   for(;;){
     await waitGavel();
     const s = CASE.statements[selected];
@@ -495,7 +518,7 @@ async function pick(list, solved, labelOf, hintText, wrongHint){
   CASE.statements = list;
   list.forEach((s,i) => {
     const b = document.createElement('button'); b.className = 'st in' + (solved && solved.has(s.id) ? ' broken' : '');
-    b.innerHTML = '<small>' + labelOf(s) + '</small>' + s.text;
+    b.innerHTML = '<small>' + labelOf(s, i) + '</small>' + s.text;
     b.onclick = () => { if (state !== 'trial' || b.classList.contains('broken')) return; selected = i; [...box.children].forEach(c => c.classList.toggle('sel', c === b)); hint(s.confirm || '拍下惊堂木'); };
     box.appendChild(b);
   });
@@ -521,16 +544,37 @@ async function trial3(){
   $('pName').textContent = CASE.name; $('pInfo').textContent = CASE.info; show('plate'); hint('');
   await say('学生陈望,赶考路过落月桥。簿上说我失足 ——', 2600);
   await say('可是大人,水里有东西拽我的脚!', 2600);
+  show('rules');
+  await say('水鬼找替身。它们拽人,有它们的规矩 —— 阴律在右。', 3200);
   show('desk'); $('mbtn').style.visibility = 'visible'; $('gavel').style.visibility = 'hidden';
-  $('sts').classList.add('roster');
+  const lieLabel = (s, i) => '供词 · ' + '一二三'[i];
 
   const solved = new Set();
   for (const L of LINKS){
     CASE.memory = {clip:L.mem, cap:L.cap}; openMirror(true);
-    await wait(3600);
-    await say(L.clue, 2600);
-    const list = ROSTER.map(r => ({id:r.id, text:r.who + ' —— ' + r.mark, when:r.when, lie:r.id === L.ans, retort:'孽镜里那只手不是这样的。再看清楚。', confirm:'拍下惊堂木 —— 传唤此鬼'}));
-    await pick(list, solved, s => s.when + ' · 溺于落月桥', '落月桥溺亡名册 —— 是谁的手?选中,拍惊堂木传唤', '传错了,威严受损。再看看孽镜里那只手');
+    hint('点孽镜可以放大。看清那只手');
+    await wait(4200);
+
+    if (L.lieFirst){   // 何伯:先戳破他的谎
+      await say('孽镜照的是何伯自己落水那一刻。', 2600);
+      $('sts').classList.remove('roster');
+      await pick(HE_LIES, null, lieLabel, '他说这条链到他为止。哪一句是假的?选中,拍惊堂木', '拍错了,威严受损。对照孽镜再想');
+      flash();
+      await say('孽镜里,你脚踝上明明有一只手。', 2800);
+      show('sts', false);
+      await say('何伯:……那只手腕上缠着花。老汉认得那花环。', 3200);
+      await say('何伯:她天天在渡口卖花,老汉天天给她留一条小鱼。', 3200);
+      await say('何伯:那只手拽老汉的时候 —— 老汉没有挣。', 3200);
+    }
+
+    $('sts').classList.add('roster');
+    const list = ROSTER.map(r => {
+      const done = solved.has(r.id);
+      const retort = r.years <= L.vy ? '此人死在' + L.victim + '之后。还没下水的人,怎么从水里伸手?'
+                   : (r.why || '孽镜里那只手不是这样的。再看清楚。');
+      return {id:r.id, text:done ? r.who : r.who + ' —— ' + r.mark, when:r.when, lie:r.id === L.ans, retort, confirm:'拍下惊堂木 —— 传唤此鬼'};
+    });
+    await pick(list, solved, s => s.when, '落月桥溺亡名册 —— 拽' + L.victim + '的是谁?选中,拍惊堂木传唤', '传错了,威严受损。对照孽镜和阴律再想');
     solved.add(L.ans);
     stamp('传'); await wait(1300);
     show('sts', false); openMirror(false); show('plate', false);
@@ -542,14 +586,15 @@ async function trial3(){
   }
 
   // 链的源头:不是水鬼,是活人
-  CASE.memory = {clip:'m5', cap:'走马灯 · 无名女 · 十年前,落月桥上'}; openMirror(true);
-  await wait(3800);
+  CASE.memory = {clip:'m5', cap:'走马灯 · 无名女 · 十年前春,落月渡口'}; openMirror(true);
+  hint('点孽镜可以放大。看清那只手,和她脚下的桥');
+  await wait(4200);
   await say('没有手从水里拽她。是有人在桥上,推了她。', 3000);
-  await say('那只手腕缠佛珠 —— 溺亡名册上没有这个人。他还活着。', 3200);
-  $('sts').classList.remove('roster');
+  await say('这个人不在溺亡名册上 —— 他还活着。翻阳间簿。', 3000);
+  $('sts').classList.remove('roster'); show('rules', false);
   LIVING[1].confirm = '他是万民称颂的大善人。确定是他? —— 拍下惊堂木,朱笔勾魂';
   LIVING[0].confirm = LIVING[2].confirm = '拍下惊堂木 —— 朱笔勾魂';
-  await pick(LIVING, null, s => '阳间在世 · ' + s.who, '凶手还活着。是谁的手?选中,拍惊堂木,朱笔勾魂', '勾错了,威严受损。再看看孽镜里那只手');
+  await pick(LIVING, null, s => '阳间在世 · ' + s.who, '三个人都戴佛珠。是谁的手?选中,拍惊堂木,朱笔勾魂', '勾错了,威严受损。佛珠之外,再看袖口,再算时间');
   stamp('勾');
   await say('朱笔一勾,阳寿尽销。', 1500);
   show('sts', false); show('desk', false); openMirror(false); show('plate', false);
@@ -559,8 +604,14 @@ async function trial3(){
   await play('k56');
   await play('k6_loop', {loop:true});
   $('pName').textContent = '沈万钧'; $('pInfo').textContent = '阳寿未尽 · 朱笔勾到　人称 · 沈大善人'; show('plate');
-  await say('沈万钧:冤枉!我修桥施粥十年,功德簿上一笔一笔都记着!', 3200);
-  await say('桥是十年前修的。她,是十年前死的。', 3000);
+  await say('沈万钧:冤枉!单凭一串佛珠,就要定老夫的罪?', 3000);
+
+  // 当堂对质:用孽镜戳破他的辩词
+  show('desk'); openMirror(true);
+  await pick(SHEN_LIES, null, lieLabel, '他哪一句是假的?对照孽镜,选中,拍惊堂木', '拍错了,威严受损。看孽镜里的桥');
+  flash();
+  await say('孽镜里是一座木栈桥。石桥修成之前的春天,你就站在这里。', 3600);
+  show('sts', false); show('desk', false); openMirror(false);
   await say('沈万钧:……她看见我凿沉了赈灾的粮船。一个哑巴,偏偏会写字。', 3600);
   await say('你修的不是桥,是她的坟。此后每隔两三年,桥下就多一条命。', 3600);
   await say('依阴律:水鬼须得替身,方可超生。五条冤魂,都在等你一句话。', 3600);
@@ -579,7 +630,7 @@ $('bAgain').onclick = () => intro();
 /* ============ 启动 ============ */
 loadAll().then(() => { $('loadTxt').textContent = '灯已点齐'; show('bStart'); })
   .catch(e => { $('loadTxt').textContent = '资源加载失败:' + e.message; });
-$('bStart').onclick = () => { show('load', false); intro(); };
+$('bStart').onclick = () => { show('load', false); sfx('bgm', {loop:true, vol:.32}); intro(); };
 </script>
 </body>
 </html>
